@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	// "bytes"
 	// "crypto/subtle"
 	"encoding/json"
 	"net/http"
@@ -48,7 +49,6 @@ func (p *Plugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var webhook Webhook
-
 	json.NewDecoder(r.Body).Decode(&webhook);
 
 	// mm
@@ -56,7 +56,10 @@ func (p *Plugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	channel, _ := p.api.GetChannelByName("test", team.Id);
 	user, _ := p.api.GetUserByUsername(config.UserName);
 
-	attachment, _ := webhook.SlackAttachment();
+	attachment, err := webhook.SlackAttachment();
+	if err != nil {
+		return
+	}
 
 	if _, err := p.api.CreatePost(&model.Post{
 		ChannelId: channel.Id,

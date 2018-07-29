@@ -1,13 +1,13 @@
 package main
 
 import (
-	// "bytes"
+	"bytes"
 	// "strings"
-	// "text/template"
+	"text/template"
+	"errors"
 
 	"github.com/mattermost/mattermost-server/model"
 )
-
 
  type Owner struct {
 	 ID int `json:"id"`
@@ -99,7 +99,6 @@ type UserStory struct {
 	TribeGig interface{} `json:"tribe_gig"`
 }
 
-
 type Data struct {
 	CustomAttributesValues struct {
 	} `json:"custom_attributes_values"`
@@ -151,6 +150,24 @@ type Webhook struct {
 				From string `json:"from"`
 				To string `json:"to"`
 			} `json:"assigned_to"`
+			Status struct {
+				From string `json:"from"`
+				To string `json:"to"`
+			}
+			UserStory struct {
+				From string `json:"from"`
+				To string `json:"to"`
+			}
+			Description struct {
+				From string `json:"from"`
+				To string `json:"to"`
+			}
+			Subject struct {
+				From string `json:"from"`
+				To string `json:"to"`
+			}
+
+
 		} `json:"diff"`
 		Comment string `json:"comment"`
 		CommentHTML string `json:"comment_html"`
@@ -159,13 +176,102 @@ type Webhook struct {
 	} `json:"change"`
 }
 
+func (w *Webhook) renderTitle() (string, error) {
+
+	var typeja string
+
+	switch w.Type {
+	case "epic": typeja = "エピック"
+	case "userstory": typeja = "ユーザーストーリー"
+	case "task": typeja = "タスク"
+	}
+
+	var actja string
+
+	switch w.Action {
+	case "create": actja = "作成"
+	case "change": actja = "変更"
+	case "delete": actja = "削除"
+	}
+
+	tplBody := "" +
+		"{{.By.FullName}} が {{.Typeja}}:{{.Data.Subject}} を {{.Actionja}} しました"
+
+	tpl, err := template.New("post").Parse(tplBody)
+	if err != nil {
+		return "", err
+	}
+
+	var buf bytes.Buffer
+	if err := tpl.Execute(&buf, struct {
+		*Webhook
+		Typeja string
+		Actionja string
+	}{
+		Webhook: w,
+		Typeja: typeja,
+		Actionja: actja,
+	}); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
+func (w *Webhook) renderText() (string, error) {
+
+	if w.Action == "create" {
+		// 作成は、タイトルをお知らせ、中身がある場合は中身も表示する。
+		return w.Data.Description, nil
+
+	} else if w.Action == "change" {
+		// コメント
+		if (w.Change.Comment != "") {
+			return "コメント: " +
+				w.Change.Comment, nil
+		}
+		// 本文
+		if (w.Change.Diff.Description.To != "" ) {
+			return "本文: " +
+				w.Change.Diff.Description.To, nil
+		}
+		// ステータス
+		if (w.Change.Diff.Status.To != "" ) {
+			return "ステータス: " +
+				w.Change.Diff.Status.From + "から" +
+				w.Change.Diff.Status.To + "へ", nil
+		}
+
+	} else if w.Action == "delete" {
+		return w.Data.Subject + "が" + w.By.FullName + "によって削除されました", nil
+	}
+
+	return "", errors.New("unknown action type")
+}
 
 func (w *Webhook) SlackAttachment() (*model.SlackAttachment, error) {
 
+	text, err := w.renderText()
+	if err != nil {
+		return nil, err
+	}
+
+	title,  err := w.renderTitle()
+	if err != nil {
+		return nil, err
+	}
+
 	return &model.SlackAttachment{
 		Fallback: "Fallback",
-		Color:    "#95b7d0",
-		Pretext:  "This is Pre-text",
-		Text:     w.Data.UserStory.Subject,
+		Color: "#95b7d0",
+
+		Text: text,
+		Title: title,
+		TitleLink: w.Data.Permalink,
+
+		AuthorName: "Taiga.io",
+		AuthorLink: "http://localhot:8089",
+		AuthorIcon: "https://avatars0.githubusercontent.com/u/6905422?s=200&v=4",
 	}, nil
+
 }
