@@ -3,7 +3,7 @@ package main
 import (
 	"fmt"
 	// "crypto/subtle"
-	// "encoding/json"
+	"encoding/json"
 	"net/http"
 	"sync/atomic"
 
@@ -38,14 +38,6 @@ func (p *Plugin) OnConfigurationChange() error {
 	return err
 }
 
-func (p *Plugin) SlackAttachment() (*model.SlackAttachment, error) {
-	return &model.SlackAttachment{
-		Fallback: "Fallback",
-		Color:    "#95b7d0",
-		Pretext:  "This is Pre-text",
-		Text:     "This is text",
-	}, nil
-}
 
 func (p *Plugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	config := p.config()
@@ -55,12 +47,16 @@ func (p *Plugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var webhook Webhook
 
+	json.NewDecoder(r.Body).Decode(&webhook);
+
+	// mm
 	team, _ := p.api.GetTeamByName("test");
 	channel, _ := p.api.GetChannelByName("test", team.Id);
 	user, _ := p.api.GetUserByUsername(config.UserName);
 
-	attachment, _ := p.SlackAttachment();
+	attachment, _ := webhook.SlackAttachment();
 
 	if _, err := p.api.CreatePost(&model.Post{
 		ChannelId: channel.Id,
