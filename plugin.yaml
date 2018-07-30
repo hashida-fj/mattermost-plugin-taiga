@@ -3,7 +3,7 @@ backend:
   executable: mattermost-plugin-taiga
 name: Taiga.io
 description: Receives webhook events from Taiga.io and makes Mattermost posts for them.
-version: '0.0.1'
+version: '0.0.2'
 settings_schema:
   settings:
     - key: Enabled

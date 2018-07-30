@@ -62,13 +62,15 @@ func (p *Plugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if _, err := p.api.CreatePost(&model.Post{
+
 		ChannelId: channel.Id,
 		Type:      model.POST_SLACK_ATTACHMENT,
 		UserId:    user.Id,
 		Props: map[string]interface{}{
 			"from_webhook":  "true",
-			"use_user_icon": "true",
 			"attachments":   []*model.SlackAttachment{attachment},
+			"override_username": "Taiga.io",
+			"override_icon_url": "https://avatars0.githubusercontent.com/u/6905422?s=200&v=4",
 		},
 	}); err != nil {
 		http.Error(w, err.Message, err.StatusCode)
