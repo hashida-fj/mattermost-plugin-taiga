@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	//  "fmt"
 	// "bytes"
 	// "crypto/subtle"
 	"encoding/json"
@@ -46,22 +46,29 @@ func (p *Plugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !config.Enabled || config.Secret == "" || config.UserName == "" {
 		http.Error(w, "This plugin is not configured.", http.StatusForbidden)
 		return
-	}
-
-	var webhook Webhook
-	json.NewDecoder(r.Body).Decode(&webhook);
-
-	// mm
-	team, _ := p.api.GetTeamByName("test");
-	channel, _ := p.api.GetChannelByName("test", team.Id);
-	user, _ := p.api.GetUserByUsername(config.UserName);
-
-	attachment, err := webhook.SlackAttachment();
-	if err != nil {
+	} else if r.URL.Path != "/webhook" {
+		http.NotFound(w, r)
+		return
+	} else if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	if _, err := p.api.CreatePost(&model.Post{
+	var webhook Webhook
+
+	// mm
+	if err := json.NewDecoder(r.Body).Decode(&webhook); err != nil {
+    } else if r.URL.Query().Get("channel") == "" || r.URL.Query().Get("team") == "" {
+        http.Error(w, "you must provide a team and a chanel name.", http.StatusBadRequest)
+    } else if team, err := p.api.GetTeamByName(r.URL.Query().Get("team")); err != nil {
+        http.Error(w, err.Message, err.StatusCode)
+    } else if channel, err := p.api.GetChannelByName(r.URL.Query().Get("channel"), team.Id); err != nil {
+        http.Error(w, err.Message, err.StatusCode)
+    } else if user, err := p.api.GetUserByUsername(config.UserName); err != nil {
+        http.Error(w, err.Message, err.StatusCode)
+    } else if 	attachment, err := webhook.SlackAttachment(); err != nil {
+		return
+	} else if _, err := p.api.CreatePost(&model.Post{
 
 		ChannelId: channel.Id,
 		Type:      model.POST_SLACK_ATTACHMENT,
@@ -72,12 +79,10 @@ func (p *Plugin) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			"override_username": "Taiga.io",
 			"override_icon_url": "https://avatars0.githubusercontent.com/u/6905422?s=200&v=4",
 		},
+
 	}); err != nil {
 		http.Error(w, err.Message, err.StatusCode)
 	}
-
-	fmt.Fprint(w, "ok.")
-
 }
 
 
