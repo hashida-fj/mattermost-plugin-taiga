@@ -262,7 +262,6 @@ func (w *Webhook) SlackAttachment() (*model.SlackAttachment, error) {
 	}
 
 	return &model.SlackAttachment{
-		Fallback: "Fallback",
 		Color: "#95b7d0",
 
 		Text: text,
@@ -270,7 +269,7 @@ func (w *Webhook) SlackAttachment() (*model.SlackAttachment, error) {
 		TitleLink: w.Data.Permalink,
 
 		AuthorName: "Taiga.io",
-		AuthorLink: "http://localhot:8089",
+		AuthorLink: "http://localhost:8089",
 		AuthorIcon: "https://avatars0.githubusercontent.com/u/6905422?s=200&v=4",
 	}, nil
 
